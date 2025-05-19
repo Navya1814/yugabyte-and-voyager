@@ -1,0 +1,8 @@
+---
+- name: Apply YugabyteDB setup
+  hosts: all
+  become: true
+  vars_files:
+    - /home/dopadm/packer-bank/packer/yugabytedb-role/vars/main.yml
+  roles:
+     - yugabytedb-role
