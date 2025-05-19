@@ -1,0 +1,62 @@
+- name: yugabyte system configurations
+  hosts: gcp_host
+  become: true
+
+  vars:
+    yugabyte_version: "2024.2.2.2"
+    yugabyte_user: "yugabyte-user"
+    yugabyte_home: "/home/{{ yugabyte_user }}/yugabyte-{{ yugabyte_version }}"
+    yugabyte_bin: "{{ yugabyte_home }}/bin"
+    yugabyte_data_dir: "/home/{{ yugabyte_user }}/var"
+
+  tasks:
+    - name: Stop yugabyted service via systemd
+      systemd:
+        name: yugabyted
+        state: stopped
+        enabled: true
+
+    - name: Run yugabyted destroy (removes data)
+      command: "{{ yugabyte_bin }}/yugabyted destroy"
+      args:
+        chdir: "{{ yugabyte_home }}"
+      become_user: "{{ yugabyte_user }}"
+
+    - name: restart the yugabyted service
+      systemd:
+        name: yugabyted
+        state: restarted
+        enabled: true
+
+    - name: Check yugabyted systemd status
+      command: systemctl status yugabyted
+      become_user: "{{ yugabyte_user }}"
+      register: yugabyted_systemd_status
+      changed_when: false
+      failed_when: false
+
+    - name: Print yugabyted systemd Status
+      debug:
+        var: yugabyted_systemd_status.stdout_lines
+
+    - name: Check yugabyted Status via CLI
+      command: "{{ yugabyte_bin }}/yugabyted Status | grep Status"
+      become_user: "{{ yugabyte_user }}"
+      register: yugabyte_Status
+      changed_when: false
+      failed_when: false
+
+    - name: Print yugabyted CLI Status
+      debug:
+        var: yugabyte_Status.stdout_lines
+
+    - name: Display YugabyteDB Web UI and APIs
+      debug:
+        msg: |
+          **YugabyteDB Cluster is now running!**
+          Web UI: http://{{ ansible_host }}:15433
+          YSQL API: http://{{ ansible_host }}:5433
+          Master UI: http://{{ ansible_host }}:7000
+          TServer UI: http://{{ ansible_host }}:9000
+
+
