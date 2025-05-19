@@ -1,0 +1,112 @@
+---
+# tasks file for yugabyte-test-role
+- name: Ensure required Yugabyte directories exist (recursively)
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ yugabyte_user }}"
+    group: "{{ yugabyte_user }}"
+    mode: '0755'
+    recurse: yes
+  loop:
+    - "{{ yugabyte_home }}"
+    - "{{ yugabyte_data_dir }}"
+    - "{{ yugabyte_home }}/openssl-config"
+
+- name: Set system ulimits
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    create: yes
+  loop:
+    - "{{ yugabyte_user }} soft nofile 1048576"
+    - "{{ yugabyte_user }} hard nofile 1048576"
+    - "{{ yugabyte_user }} soft nproc 12000"
+    - "{{ yugabyte_user }} hard nproc 12000"
+    - "{{ yugabyte_user }} soft stack 8192"
+    - "{{ yugabyte_user }} hard stack 8192"
+    - "{{ yugabyte_user }} soft memlock 64"
+    - "{{ yugabyte_user }} hard memlock 64"
+    - "{{ yugabyte_user }} soft cpu unlimited"
+    - "{{ yugabyte_user }} hard cpu unlimited"
+    - "{{ yugabyte_user }} soft fsize unlimited"
+    - "{{ yugabyte_user }} hard fsize unlimited"
+    - "{{ yugabyte_user }} soft data unlimited"
+    - "{{ yugabyte_user }} hard data unlimited"
+    - "{{ yugabyte_user }} soft rss unlimited"
+    - "{{ yugabyte_user }} hard rss unlimited"
+    - "{{ yugabyte_user }} soft vmem unlimited"
+    - "{{ yugabyte_user }} hard vmem unlimited"
+    - "{{ yugabyte_user }} soft msgqueue 819200"
+    - "{{ yugabyte_user }} hard msgqueue 819200"
+    - "{{ yugabyte_user }} soft locks unlimited"
+    - "{{ yugabyte_user }} hard locks unlimited"
+    - "{{ yugabyte_user }} soft core unlimited"
+    - "{{ yugabyte_user }} hard core unlimited"
+    - "{{ yugabyte_user }} soft sigpending 119934"
+    - "{{ yugabyte_user }} hard sigpending 119934"
+
+- name: Set kernel parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.swappiness", value: "0" }
+    - { key: "kernel.core_pattern", value: "{{ yugabyte_home }}/cores/core_%p_%t_%E" }
+    - { key: "vm.max_map_count", value: "262144" }
+
+- name: Set transparent hugepage to always
+  lineinfile:
+    path: "{{ grub_config_file }}"
+    regexp: '^GRUB_CMDLINE_LINUX=".*"'
+    line: "{{ grub_line }}"
+    backrefs: yes
+  notify: Reboot Required
+
+- name: Run post-install script
+  command: "{{ yugabyte_post_install_script }}"
+  args:
+    chdir: "{{ yugabyte_home }}"
+  become_user: "{{ yugabyte_user }}"
+
+- name: Deploy yugabyted systemd service
+  template:
+    src: /home/dopadm/packer-bank/packer/yugabytedb-role/templates/yugabyted.service.j2
+    dest: /etc/systemd/system/yugabyted.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Reload systemd (Reload the systemd manager configuration)
+  command: systemctl daemon-reload
+
+- name: Restart yugabyted service
+  systemd:
+    name: yugabyted
+    state: restarted
+    enabled: true
+
+- name: Check yugabyted systemd status
+  command: systemctl status yugabyted
+  become_user: "{{ yugabyte_user }}"
+  register: yugabyted_systemd_status
+  changed_when: false
+  failed_when: false
+
+- name: Print yugabyted systemd status
+  debug:
+    var: yugabyted_systemd_status.stdout_lines
+
+- name: Check yugabyted status via CLI
+  shell: "{{ yugabyte_bin }}/yugabyted status | grep Status"
+  become_user: "{{ yugabyte_user }}"
+  register: yugabyte_status
+  changed_when: false
+  failed_when: false
+
+- name: Print yugabyted CLI status
+  debug:
+    var: yugabyte_status.stdout_lines

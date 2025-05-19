@@ -1,0 +1,22 @@
+[Unit]
+Description=YugabyteDB Cluster (yugabyted-managed)
+After=network.target
+
+[Service]
+Type=forking
+User=yugabyte-user
+WorkingDirectory=/home/yugabyte-user/yugabyte-2024.2.2.2
+
+#start the yugabytedb service
+ExecStart=python3 /home/yugabyte-user/yugabyte-2024.2.2.2/bin/yugabyted start 
+ExecStop=python3 /home/yugabyte-user/yugabyte-2024.2.2.2/bin/yugabyted stop
+ExecReload=python3 /home/yugabyte-user/yugabyte-2024.2.2.2/bin/yugabyted restart
+Restart=on-failure
+TimeoutStartSec=180
+
+LimitNOFILE=1048576
+LimitNPROC=64000
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

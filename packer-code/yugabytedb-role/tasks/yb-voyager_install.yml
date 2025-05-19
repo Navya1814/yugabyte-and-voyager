@@ -1,0 +1,84 @@
+---
+- name: Ensure yugabyte-user exists
+  user:
+    name: "{{ yugabyte_user }}"
+    state: present
+    shell: /bin/bash
+
+- name: Create yugabyte version-specific home directory
+  file:
+    path: "{{ yugabyte_home2 }}"
+    state: directory
+    owner: "{{ yugabyte_user }}"
+    group: "{{ yugabyte_user }}"
+    mode: '0755'
+
+- name: Install Yugabyte YUM repo without GPG check
+  dnf:
+    name: https://downloads.yugabyte.com/repos/reporpms/yb-yum-repo-1.1-0.noarch.rpm
+    state: present
+    disable_gpg_check: yes
+
+- name: Install EPEL release
+  dnf:
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    state: present
+    disable_gpg_check: yes
+
+- name: Ensure /opt/rpms exists
+  file:
+    path: /opt/rpms
+    state: directory
+    mode: '0755'
+
+- name: Install MySQL 8.4 repo directly using DNF with remote URL
+  shell: |
+    dnf install -y https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
+  args:
+    creates: /etc/yum.repos.d/mysql-community.repo
+
+- name: Install PostgreSQL repo
+  dnf:
+    name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+    disable_gpg_check: yes
+
+- name: Disable default PostgreSQL module
+  command: dnf -qy module disable postgresql
+
+- name: Install perl-open
+  dnf:
+    name: perl-open.noarch
+    state: present
+
+- name: Install Java 17 (OpenJDK)
+  dnf:
+    name: java-17-openjdk
+    state: present
+
+- name: Install Oracle Instant Client packages
+  dnf:
+    name:
+      - "{{ oic_url }}/oracle-instantclient-tools-21.5.0.0.0-1.x86_64.rpm"
+      - "{{ oic_url }}/oracle-instantclient-basic-21.5.0.0.0-1.x86_64.rpm"
+      - "{{ oic_url }}/oracle-instantclient-devel-21.5.0.0.0-1.x86_64.rpm"
+      - "{{ oic_url }}/oracle-instantclient-jdbc-21.5.0.0.0-1.x86_64.rpm"
+      - "{{ oic_url }}/oracle-instantclient-sqlplus-21.5.0.0.0-1.x86_64.rpm"
+    state: present
+    disable_gpg_check: yes
+
+- name: Install specific version of yb-voyager
+  dnf:
+    name: "yb-voyager-{{ voyager_version }}"
+    state: present
+
+- name: Ensure ~/ is in PATH for yugabyte-user
+  lineinfile:
+    path: "/home/{{ yugabyte_user }}/.bashrc"
+    line: 'export PATH=$PATH:{{ yugabyte_home2 }}'
+
+- name: Ensure ~/ is in PATH for yugabyte-user
+  lineinfile:
+    path: "/home/{{ yugabyte_user }}/.bashrc"
+    line: 'export PATH=$PATH:{{ yugabyte_home2 }}'
+

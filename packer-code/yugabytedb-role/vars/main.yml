@@ -1,0 +1,16 @@
+---
+# vars file for yugabytedb-role
+
+yugabyte_version: "2024.2.2.2"
+yugabyte_user: "yugabyte-user"
+yugabyte_home: "/home/{{ yugabyte_user }}/yugabyte-{{ yugabyte_version }}"
+yugabyte_bin: "{{ yugabyte_home }}/bin"
+yugabyte_post_install_script: "{{ yugabyte_bin }}/post_install.sh"
+yugabyte_data_dir: "/home/{{ yugabyte_user }}/var"
+yugabyte_service_file: "/etc/systemd/system/yugabyted.service"
+grub_config_file: "/etc/default/grub"
+grub_line: 'GRUB_CMDLINE_LINUX="transparent_hugepage=always"'
+
+voyager_version: "1.8.17"
+yugabyte_home2: "/home/{{ yugabyte_user }}"
+oic_url: "https://download.oracle.com/otn_software/linux/instantclient/215000"

@@ -1,0 +1,14 @@
+---
+# handlers file for yugabytedb-role
+
+- name: Reload systemd
+  shell: systemctl daemon-reexec && systemctl daemon-reload
+
+- name: Reboot Required
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  notify: Reboot system
+
+- name: Reboot system
+  reboot:
+    msg: "System rebooting to apply kernel and limits changes"
+    reboot_timeout: 300

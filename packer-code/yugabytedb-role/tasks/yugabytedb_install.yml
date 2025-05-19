@@ -1,0 +1,45 @@
+---
+- name: Ensure Python 3 is installed
+  package:
+    name: python3
+    state: present
+
+- name: Create symlink /usr/bin/python -> /usr/bin/python3 if it doesn't exist
+  ansible.builtin.file:
+    src: /usr/bin/python3
+    dest: /usr/bin/python
+    state: link
+    force: no  # do not overwrite if it already exists
+  when: ansible_facts['distribution'] in ['CentOS', 'RedHat', 'Fedora']
+
+- name: Enable and start SSH
+  systemd:
+    name: sshd
+    enabled: yes
+    state: started
+
+- name: Enable and start chrony
+  systemd:
+    name: chronyd
+    enabled: yes
+    state: started
+
+- name: Download YugabyteDB tarball into user home
+  become: true
+  become_user: "{{ yugabyte_user }}"
+  get_url:
+    url: https://software.yugabyte.com/releases/2024.2.2.2/yugabyte-2024.2.2.2-b2-linux-x86_64.tar.gz
+    dest: "/home/{{ yugabyte_user }}/yugabyte.tar.gz"
+
+- name: Extract YugabyteDB
+  become: true
+  become_user: "{{ yugabyte_user }}"
+  unarchive:
+    src: "/home/{{ yugabyte_user }}/yugabyte.tar.gz"
+    dest: "/home/{{ yugabyte_user }}"
+    remote_src: yes
+
+- name: Remove tarball
+  file:
+    path: "/home/{{ yugabyte_user }}/yugabyte.tar.gz"
+    state: absent

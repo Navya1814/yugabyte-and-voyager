@@ -1,0 +1,5 @@
+---
+# tasks file for yugabytedb-role
+- import_tasks: tasks/yugabytedb_install.yml
+- import_tasks: tasks/configure_yugabyted.yml
+- import_tasks: tasks/yb-voyager_install.yml
